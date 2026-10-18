@@ -111,9 +111,15 @@ const GameLibrary& GameLibrary::GetGameLibrary(const ::std::wstring& path) {
 }
 
 std::map<::std::wstring, GameLibrary>& GameLibrary::GetLibrariesByPaths() {
-  static std::map<::std::wstring, GameLibrary> libraries_by_paths;
+  // Intentionally immortal. The map is consulted from the destructors of the
+  // mod's CEL wrappers, which may run after function-local statics have been
+  // destroyed. Destroying it would make GameLibrary lookups return a zeroed
+  // entry (and let LoadLibraryW be called during process shutdown).
+  // Allocate once, never destroy.
+  static std::map<::std::wstring, GameLibrary>* libraries_by_paths =
+      new std::map<::std::wstring, GameLibrary>();
 
-  return libraries_by_paths;
+  return *libraries_by_paths;
 }
 
 std::intptr_t GameLibrary::LoadGameLibraryBaseAddress(const wchar_t* path) {
