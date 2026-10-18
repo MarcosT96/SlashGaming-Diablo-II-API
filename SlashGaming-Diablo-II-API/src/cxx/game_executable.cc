@@ -84,9 +84,16 @@ static const FileVersionInfo& GetGameExecutableFileVersionInfo() {
 } // namespace
 
 const wchar_t* GetPath() {
-  static ::std::wstring kGameExecutablePath = InitGameExecutablePath();
+  // Intentionally immortal. SGD2FreeRes' CEL wrappers resolve game addresses
+  // from their own destructors, which may run after function-local statics
+  // have already been destroyed. A destroyed static here yields an empty
+  // path, so GetGameLibrary returns a zeroed entry and "base + offset"
+  // collapses to the bare offset (the game then calls e.g. 0x000FAAE0
+  // instead of 0x004FAAE0). Allocate once, never destroy.
+  static ::std::wstring* kGameExecutablePath =
+      new ::std::wstring(InitGameExecutablePath());
 
-  return kGameExecutablePath.c_str();
+  return kGameExecutablePath->c_str();
 }
 
 bool IsD2se() {
